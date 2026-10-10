@@ -1,6 +1,6 @@
-const express = require('express');
-const app = express();
-const port = 5000;
+const express = require('express');//השרת
+const app = express(); //
+const port = 5000;//מיקום השרת 
 
 // ייבוא מערך הספרים מקובץ הנתונים
 const { books } = require('./db');
