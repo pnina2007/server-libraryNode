@@ -15,7 +15,7 @@ const books = [
     price: 150,
     isBorrowed: true,
     borrowHistory: [
-      { borrowDate: '2026-02-01', customerCode: 101 }
+      { borrowDate: '2026-02-01', customerCode: 2 }
     ]
   }
 ];
