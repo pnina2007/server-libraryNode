@@ -46,13 +46,16 @@ const getAllBooks = (req, res) => {
 
 
 // 2. קבלת ספר לפי קוד
-const getBookByCode = (req, res) => {
+const getBookByCode = (req, res, next) => {
   const bookCode = parseInt(req.params.code);
   const book = books.find(b => b.code === bookCode);
 
   if (!book) {
-    return res.status(404).json({ message: 'הספר לא נמצא במערכת' });
-  }
+  const error = new Error('הספר לא נמצא במערכת');
+  error.status = 404;
+  error.type = 'Not Found';
+  return next(error);     //שולח למטפל שגיאות המרכזי
+}
 
   res.json(book);
 };
@@ -75,15 +78,16 @@ const addBook = (req, res) => {
 
 
 // 4. עדכון ספר קיים לפי קוד (מלבד שדות השאלה)
-const updateBook = (req, res) => {
+const updateBook = (req, res, next) => {
   const bookCode = parseInt(req.params.code);
   const book = books.find(b => b.code === bookCode);
 
   if (!book) {
-    return res.status(404).json({
-      message: 'הספר לא נמצא, לא ניתן לעדכן'
-    });
-  }
+  const error = new Error('הספר לא נמצא במערכת לא ניתן לעדכן');
+  error.status = 404;
+  error.type = 'Not Found';
+  return next(error);
+};
 
   book.title = req.body.title || book.title;
   book.category = req.body.category || book.category;
@@ -96,17 +100,24 @@ const updateBook = (req, res) => {
 
 
 // 5. ביצוע השאלה
-const borrowBook = (req, res) => {
+const borrowBook = (req, res, next) => {
   const bookCode = parseInt(req.params.code);
   const book = books.find(b => b.code === bookCode);
 
   if (!book) {
-    return res.status(404).json({ message: 'הספר לא נמצא' });
-  }
+  const error = new Error('הספר לא נמצא במערכת');
+  error.status = 404;
+  error.type = 'Not Found';
+  return next(error);
+}
 
   if (book.isBorrowed) {
-    return res.status(400).json({ message: 'הספר כבר מושאל לאחר' });
-  }
+  const error = new Error('הספר כבר מושאל ');
+ error.status = 400;
+error.type = 'Bad Request';
+  return next(error);
+}
+  
 
   const { customerCode, borrowDate } = req.body;
   // מציאת המשתמש שהשאיל את הספר
@@ -119,25 +130,38 @@ const borrowBook = (req, res) => {
       borrowDate: borrowDate || new Date().toISOString().split('T')[0],
       customerCode: customerCode});}
   else{
-     res.json({ message: 'המשתמש לק קיים במערכת-אין אפשרות להשאיל ספר' });
-  }
+  const error = new Error('המשתמש לא קיים במערכת');
+  error.status = 404;
+  error.type = 'Not Found';
+  return next(error);
+}
+    
 
   res.json({ message: 'הספר הושאל בהצלחה', book });
-};
+  };
+
 
 
 // 6. ביצוע החזרה
-const returnBook = (req, res) => {
+const returnBook = (req, res, next) => {
   const bookCode = parseInt(req.params.code);
   const book = books.find(b => b.code === bookCode);
 
   if (!book) {
-    return res.status(404).json({ message: 'הספר לא נמצא' });
-  }
+  const error = new Error('הספר לא נמצא במערכת');
+  error.status = 404;
+  error.type = 'Not Found';
+  return next(error);
+}
+  
 
   if (!book.isBorrowed) {
-    return res.status(400).json({ message: 'הספר כלל אינו מושאל' });
-  }
+  const error = new Error('הספר כלל אינו מושאל');
+  error.status = 400;
+  error.type = 'Bad Request';
+  return next(error);
+}
+  
 
   // מציאת ההשאלה האחרונה של הספר
   const lastBorrow = book.borrowHistory[book.borrowHistory.length - 1];
@@ -161,15 +185,16 @@ const returnBook = (req, res) => {
 
 
 // 7. מחיקת ספר לפי קוד
-const deleteBook = (req, res) => {
+const deleteBook = (req, res, next) => {
   const bookCode = parseInt(req.params.code);
   const bookIndex = books.findIndex(b => b.code === bookCode);
 
   if (bookIndex === -1) {
-    return res.status(404).json({
-      message: 'הספר לא נמצא, לא ניתן למחוק'
-    });
-  }
+  const error = new Error('הספר לא נמצא במערכת');
+  error.status = 404;
+  error.type = 'Not Found';
+  return next(error);
+};
 
   const deletedBook = books.splice(bookIndex, 1);
   res.json({ message: 'הספר נמחק בהצלחה', deletedBook });

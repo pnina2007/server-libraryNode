@@ -15,34 +15,41 @@ const getAllUsers = (req, res) => {
 
 
 // 2. הרשמה
-const signUp = (req, res) => {
+const signUp = (req, res, next) => {
   const { username, email, password } = req.body;
 
   // בדיקה שכל השדות הנדרשים נשלחו
-if (!username || !email || !password) {
-  return res.status(400).json({
-    message: 'יש למלא שם משתמש, אימייל וסיסמה'
-  });
-}
-// בדיקה אם האימייל כבר קיים
-const existingEmail = users.find(
-  user => user.email === email
-);
+  if (!username || !email || !password) {
+    const error = new Error('יש למלא שם משתמש, אימייל וסיסמה');
+    error.status = 400;
+    error.type = 'Bad Request';
+    return next(error);
+  }
 
-if (existingEmail) {
-  return res.status(400).json({
-    message: 'האימייל כבר קיים במערכת'
-  });
-}
+  // בדיקה אם האימייל כבר קיים
+  const existingEmail = users.find(
+    user => user.email === email
+  );
+
+  if (existingEmail) {
+    const error = new Error('האימייל כבר קיים במערכת');
+    error.status = 400;
+    error.type = 'Bad Request';
+    return next(error);
+  }
+
 
   // בדיקה אם הסיסמא כבר קיימת 
   const existingUser = users.find(user => user.password === password);
 
-  if (existingUser) {
-    return res.status(400).json({
-      message: 'הסיסמא כבר קיימת במערכת'
-    });
+      if (existingUser) {
+    const error = new Error('הסיסמה כבר קיימת במערכת');
+    error.status = 400;
+    error.type = 'Bad Request';
+    return next(error);
   }
+
+  
 
   // יצירת משתמש חדש
   const newUser = {
@@ -69,15 +76,17 @@ if (existingEmail) {
 };
 
 // 3. התחברות
-const signIn = (req, res) => {
+const signIn = (req, res, next) => {
   const { email, password } = req.body;
 
   // בדיקה שכל השדות נשלחו
   if (!email || !password) {
-    return res.status(400).json({
-      message: 'יש למלא אימייל וסיסמה'
-    });
-  }
+  const error = new Error('יש למלא אימייל וסיסמה');
+  error.status = 400;
+  error.type = 'Bad Request';
+  return next(error);
+}
+  
 
   // חיפוש משתמש לפי אימייל וסיסמה
   const user = users.find(
@@ -86,10 +95,11 @@ const signIn = (req, res) => {
   );
 
   if (!user) {
-    return res.status(401).json({
-      message: 'האימייל או הסיסמה שגויים'
-    });
-  }
+  const error = new Error('האימייל או הסיסמה שגויים');
+  error.status = 401;
+  error.type = 'Unauthorized';
+  return next(error);
+}
 
   res.json({
     message: 'ההתחברות הצליחה',
