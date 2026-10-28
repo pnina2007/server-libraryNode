@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const logGetDate = require('../middlewares/logGetDate');
+const validate = require('../middlewares/validate');
+const { userSchema } = require('../validations/user.validation');
 
 const {
   getAllUsers,
@@ -13,7 +15,7 @@ const {
 router.get('/', logGetDate, getAllUsers);
 
 // הרשמה
-router.post('/signup', signUp);
+router.post('/signup', validate(userSchema), signUp);
 
 // התחברות
 router.post('/signin', signIn);

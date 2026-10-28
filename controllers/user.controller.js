@@ -1,5 +1,6 @@
 
 const users = require('../usersDB');
+const { userSchema } = require('../validations/user.validation');
 
 // הצגת כל המשתמשים בלי סיסמאות
 const getAllUsers = (req, res) => {
@@ -17,6 +18,14 @@ const getAllUsers = (req, res) => {
 // 2. הרשמה
 const signUp = (req, res, next) => {
   const { username, email, password } = req.body;
+  const { error } = userSchema.validate(req.body);
+//מקשר לJOI
+if (error) {
+  const err = new Error(error.details[0].message);
+  err.status = 400;
+  err.type = 'Bad Request';
+  return next(err);
+}
 
   // בדיקה שכל השדות הנדרשים נשלחו
   if (!username || !email || !password) {

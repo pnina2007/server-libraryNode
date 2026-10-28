@@ -1,6 +1,28 @@
 
 const { books } = require('../db');
 const users = require('../usersDB');
+const {
+  bookSchema,
+  updateBookSchema
+} = require('../validations/book.validation');
+
+const fs = require('fs/promises');
+const path = require('path');
+
+/// שמירת התמונה בתיקיית public
+const saveUploadedImage = async (req, bookCode) => {
+  if (!req.file) return null;
+
+  const fileType = req.imageFileType;
+  const timestamp = Date.now();
+  const filename = `${bookCode}-${timestamp}.${fileType.ext}`;
+  const publicDir = path.join(__dirname, '..', 'public');
+
+  await fs.writeFile(path.join(publicDir, filename), req.file.buffer);
+
+  return filename;
+};
+
 
 // 1
 // קבלת כל הספרים עם אפשרות חיפוש, סינון וחלוקה לעמודים 
@@ -62,40 +84,57 @@ const getBookByCode = (req, res, next) => {
 
 
 // 3. הוספת ספר חדש
-const addBook = (req, res) => {
-  const newBook = {
-    code: books.length > 0 ? books[books.length - 1].code + 1 : 1,
-    title: req.body.title,
-    category: req.body.category,
-    price: req.body.price,
-    isBorrowed: false,
-    borrowHistory: []
-  };
+const addBook = async (req, res, next) => {
+  try {
+    const code = books.length > 0
+      ? books[books.length - 1].code + 1
+      : 1;
 
-  books.push(newBook);
-  res.status(201).json(newBook);
+    const image = await saveUploadedImage(req, code);
+
+    const newBook = {
+      code,
+      title: req.body.title,
+      category: req.body.category,
+      price: req.body.price,
+      isBorrowed: false,
+      borrowHistory: [],
+      ...(image ? { image } : {})
+    };
+
+    books.push(newBook);
+    res.status(201).json(newBook);
+  } catch (error) {
+    next(error);
+  }
 };
-
 
 // 4. עדכון ספר קיים לפי קוד (מלבד שדות השאלה)
-const updateBook = (req, res, next) => {
-  const bookCode = parseInt(req.params.code);
-  const book = books.find(b => b.code === bookCode);
+const updateBook = async (req, res, next) => {
+  try {
+    const bookCode = parseInt(req.params.code);
+    const book = books.find(b => b.code === bookCode);
 
-  if (!book) {
-  const error = new Error('הספר לא נמצא במערכת לא ניתן לעדכן');
-  error.status = 404;
-  error.type = 'Not Found';
-  return next(error);
-};
+    if (!book) {
+      const error = new Error('הספר לא נמצא במערכת לא ניתן לעדכן');
+      error.status = 404;
+      error.type = 'Not Found';
+      return next(error);
+    }
 
-  book.title = req.body.title || book.title;
-  book.category = req.body.category || book.category;
-  book.price = req.body.price !== undefined
-    ? req.body.price
-    : book.price;
+    const image = await saveUploadedImage(req, bookCode);
+    if (image) book.image = image;
 
-  res.json({ message: 'הספר עודכן בהצלחה', book });
+    book.title = req.body.title || book.title;
+    book.category = req.body.category || book.category;
+    book.price = req.body.price !== undefined
+      ? req.body.price
+      : book.price;
+
+    res.json({ message: 'הספר עודכן בהצלחה', book });
+  } catch (error) {
+    next(error);
+  }
 };
 
 

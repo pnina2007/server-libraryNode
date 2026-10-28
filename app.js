@@ -1,6 +1,7 @@
 const express = require('express');//השרת
 const app = express(); //
 const port = 5000;//מיקום השרת 
+app.use(express.static('public'));
 
 const morgan = require('morgan'); //שנוכל לראות מידע על הבקשה שהגיע לשרת 
 const cors = require('cors');     //מאפשר לקלינטים לגשת לשרת ללא חסימה
@@ -40,6 +41,7 @@ app.use(notFound);
 
 // מטפל בשגיאות שנשלחו אליו מכל הפרויקט
 app.use(errorHandler);
+
 
 // הפעלת השרת בפורט 5000
 app.listen(port, () => {

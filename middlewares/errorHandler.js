@@ -7,7 +7,8 @@ const errorHandler = (err, req, res, next) => {
             type: err.type || 'Server Error',
             ...(process.env.NODE_ENV === 'development' && {
                 stack: err.stack
-            })
+            }),
+            details: err.details
         }
     });
 };
