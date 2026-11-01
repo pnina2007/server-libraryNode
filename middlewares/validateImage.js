@@ -4,8 +4,9 @@ const validateImage = async (req, res, next) => {
         if (!req.file) {
             return next();
         }
-
+        //מייבא אפשרות בדיקת סוג תמונה
         const { fileTypeFromBuffer } = await import('file-type');
+        //בודק את התמונה
         const fileType = await fileTypeFromBuffer(req.file.buffer);
 
         const allowedTypes = [

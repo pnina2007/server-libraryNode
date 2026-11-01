@@ -17,7 +17,7 @@ const saveUploadedImage = async (req, bookCode) => {
   const timestamp = Date.now();
   const filename = `${bookCode}-${timestamp}.${fileType.ext}`;
   const publicDir = path.join(__dirname, '..', 'public');
-
+//שם את התמונה בתקייה ושם את השם שרצינו על התמונה הזו..
   await fs.writeFile(path.join(publicDir, filename), req.file.buffer);
 
   return filename;

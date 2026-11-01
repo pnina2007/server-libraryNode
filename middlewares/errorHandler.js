@@ -1,4 +1,12 @@
 const errorHandler = (err, req, res, next) => {
+
+    // בדיקה אם הקובץ שהועלה גדול מהמותר
+    if (err.code === 'LIMIT_FILE_SIZE') {
+        err.status = 400;
+        err.type = 'Bad Request';
+        err.message = 'קובץ התמונה גדול מדי. הגודל המקסימלי הוא 1MB';
+    }
+
     const status = err.status || 500;
 
     res.status(status).json({
