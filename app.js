@@ -1,12 +1,16 @@
+require('dotenv').config();
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
 const express = require('express');//השרת
 const app = express(); //
 const port = 5000;//מיקום השרת 
 app.use(express.static('public'));
 
+const connectDB = require('./config/db');
 const morgan = require('morgan'); //שנוכל לראות מידע על הבקשה שהגיע לשרת 
 const cors = require('cors');     //מאפשר לקלינטים לגשת לשרת ללא חסימה
-// ייבוא מערך הספרים מקובץ הנתונים
-const { books } = require('./db');
+
 const users = require('./usersDB');
 const addCurrentDate = require('./middlewares/currentDate');
 const router = require('./router/index.js');
@@ -44,6 +48,8 @@ app.use(errorHandler);
 
 
 // הפעלת השרת בפורט 5000
-app.listen(port, () => {
-  console.log(`השרת רץ בכתובת: http://localhost:${port}`);
+connectDB().then(() => {
+    app.listen(port, () => {
+        console.log(`השרת רץ בכתובת: http://localhost:${port}`);
+    });
 });
