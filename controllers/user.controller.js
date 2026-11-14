@@ -1,124 +1,102 @@
 
-const users = require('../usersDB');
+const User = require('../models/user.model');
 const { userSchema } = require('../validations/user.validation');
 
 // הצגת כל המשתמשים בלי סיסמאות
-const getAllUsers = (req, res) => {
-  const safeUsers = users.map(user => ({
-    code: user.code,
-    username: user.username,
-    email: user.email,
-    borrowedBooks: user.borrowedBooks
-  }));
-
-  res.json(safeUsers);
+const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (error) {
+    next(error);
+  }
 };
 
-
 // 2. הרשמה
-const signUp = (req, res, next) => {
-  const { username, email, password } = req.body;
-  const { error } = userSchema.validate(req.body);
-//מקשר לJOI
-if (error) {
-  const err = new Error(error.details[0].message);
-  err.status = 400;
-  err.type = 'Bad Request';
-  return next(err);
-}
+const signUp = async (req, res, next) => {
+  try {
+    const { name, email, phone, password } = req.body;
 
-  // בדיקה שכל השדות הנדרשים נשלחו
-  if (!username || !email || !password) {
-    const error = new Error('יש למלא שם משתמש, אימייל וסיסמה');
-    error.status = 400;
-    error.type = 'Bad Request';
-    return next(error);
-  }
+    // בדיקת תקינות באמצעות JOI
+    const { error } = userSchema.validate(req.body);
 
-  // בדיקה אם האימייל כבר קיים
-  const existingEmail = users.find(
-    user => user.email === email
-  );
-
-  if (existingEmail) {
-    const error = new Error('האימייל כבר קיים במערכת');
-    error.status = 400;
-    error.type = 'Bad Request';
-    return next(error);
-  }
-
-
-  // בדיקה אם הסיסמא כבר קיימת 
-  const existingUser = users.find(user => user.password === password);
-
-      if (existingUser) {
-    const error = new Error('הסיסמה כבר קיימת במערכת');
-    error.status = 400;
-    error.type = 'Bad Request';
-    return next(error);
-  }
-
-  
-
-  // יצירת משתמש חדש
-  const newUser = {
-    code: users.length > 0
-      ? Math.max(...users.map(user => user.code)) + 1
-      : 1,
-    username,
-    email,
-    password,
-    borrowedBooks: []
-  };
-
-  users.push(newUser);
-
-  res.status(201).json({
-    message: 'ההרשמה הצליחה',
-    user: {
-      code: newUser.code,
-      username: newUser.username,
-      email: newUser.email,
-      borrowedBooks: newUser.borrowedBooks
+    if (error) {
+      const err = new Error(error.details[0].message);
+      err.status = 400;
+      err.type = 'Bad Request';
+      return next(err);
     }
-  });
+
+    // בדיקה אם האימייל כבר קיים
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      const error = new Error('האימייל כבר קיים במערכת');
+      error.status = 400;
+      error.type = 'Bad Request';
+      return next(error);
+    }
+
+    // יצירת משתמש חדש במסד הנתונים
+    const newUser = await User.create({
+      name, email, phone, password });
+
+    res.status(201).json({
+      message: 'ההרשמה הצליחה',
+      user: {
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        borrowedBooks: newUser.borrowedBooks
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
 };
 
 // 3. התחברות
-const signIn = (req, res, next) => {
-  const { email, password } = req.body;
+const signIn = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
 
-  // בדיקה שכל השדות נשלחו
-  if (!email || !password) {
-  const error = new Error('יש למלא אימייל וסיסמה');
-  error.status = 400;
-  error.type = 'Bad Request';
-  return next(error);
-}
-  
-
-  // חיפוש משתמש לפי אימייל וסיסמה
-  const user = users.find(
-    user => user.email === email &&
-            user.password === password
-  );
-
-  if (!user) {
-  const error = new Error('האימייל או הסיסמה שגויים');
-  error.status = 401;
-  error.type = 'Unauthorized';
-  return next(error);
-}
-
-  res.json({
-    message: 'ההתחברות הצליחה',
-    user: {
-      code: user.code,
-      username: user.username,
-      email: user.email,
-      borrowedBooks: user.borrowedBooks
+    // בדיקה שכל השדות נשלחו
+    if (!email || !password) {
+      const error = new Error('יש למלא אימייל וסיסמה');
+      error.status = 400;
+      error.type = 'Bad Request';
+      return next(error);
     }
-  });
+
+    // חיפוש משתמש במסד הנתונים
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      password
+    });
+
+    if (!user) {
+      const error = new Error('האימייל או הסיסמה שגויים');
+      error.status = 401;
+      error.type = 'Unauthorized';
+      return next(error);
+    }
+
+    res.json({
+      message: 'ההתחברות הצליחה',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        borrowedBooks: user.borrowedBooks
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {

@@ -11,6 +11,7 @@ const validateImage = require('../middlewares/validateImage');
 const {
   getAllBooks,
   getBookByCode,
+  getBooksByCategory,
   addBook,
   updateBook,
   borrowBook,
@@ -19,6 +20,7 @@ const {
 } = require('../controllers/book.controller');
 
 router.get('/', logGetDate, getAllBooks);
+router.get('/category/:category', getBooksByCategory);
 router.get('/:code', logGetDate, getBookByCode);
 router.post('/', upload.single('image'), validate(bookSchema), validateImage, addBook);
 router.put('/:code', upload.single('image'), validate(updateBookSchema), validateImage, updateBook);

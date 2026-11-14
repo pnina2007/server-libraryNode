@@ -1,5 +1,5 @@
 const Book = require('../models/book.model');
-const users = require('../usersDB');
+const User = require('../models/user.model');
 const {
   bookSchema,
   updateBookSchema
@@ -88,8 +88,19 @@ const getBookByCode = async (req, res, next) => {
   }
 };
 
+// 3. קבלת ספרים לפי קטגוריה
+const getBooksByCategory = async (req, res, next) => {
+  try {
+    const category = req.params.category;
+    const books = await Book.find({ category });
 
-// 3. הוספת ספר חדש
+    res.json(books);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 4. הוספת ספר חדש
 const addBook = async (req, res, next) => {
   try {
     // מציאת הקוד האחרון במסד הנתונים כדי ליצור קוד חדש
@@ -115,7 +126,7 @@ const addBook = async (req, res, next) => {
   }
 };
 
-// 4. עדכון ספר קיים לפי קוד (מלבד שדות השאלה)
+// 5. עדכון ספר קיים לפי קוד (מלבד שדות השאלה)
 const updateBook = async (req, res, next) => {
   try {
     const bookCode = parseInt(req.params.code);
@@ -146,10 +157,12 @@ const updateBook = async (req, res, next) => {
 };
 
 
-// 5. ביצוע השאלה
+// 6. ביצוע השאלה
 const borrowBook = async (req, res, next) => {
   try {
     const bookCode = parseInt(req.params.code);
+    const { customerId, borrowDate } = req.body;
+
     const book = await Book.findOne({ code: bookCode });
 
     if (!book) {
@@ -160,34 +173,39 @@ const borrowBook = async (req, res, next) => {
     }
 
     if (book.isBorrowed) {
-      const error = new Error('הספר כבר מושאל ');
+      const error = new Error('הספר כבר מושאל');
       error.status = 400;
       error.type = 'Bad Request';
       return next(error);
     }
 
-    const { customerCode, borrowDate } = req.body;
-    // מציאת המשתמש שהשאיל את הספר
-    const user = users.find(user => user.code === Number(customerCode));
-    //  והשאלה והוספת קוד הספר למערך הספרים המושאלים של המשתמש
-    if (user) {
-      user.borrowedBooks.push(book.code);
-      book.isBorrowed = true;
-      book.borrowHistory.push({
-        borrowDate: borrowDate || new Date().toISOString().split('T')[0],
-        customerCode: customerCode
-      });
+    // מציאת המשתמש לפי ה-ID של MongoDB
+    const user = await User.findById(customerId);
 
-      await book.save();
-    }
-    else {
+    if (!user) {
       const error = new Error('המשתמש לא קיים במערכת');
       error.status = 404;
       error.type = 'Not Found';
       return next(error);
     }
 
+    // הוספת הספר למערך הספרים המושאלים של המשתמש
+    user.borrowedBooks.push({
+      code: book.code,
+      name: book.title
+    });
+
+    book.isBorrowed = true;
+    book.borrowHistory.push({
+      borrowDate: borrowDate || new Date().toISOString().split('T')[0],
+      customerCode: customerId
+    });
+
+    await user.save();
+    await book.save();
+
     res.json({ message: 'הספר הושאל בהצלחה', book });
+
   } catch (error) {
     next(error);
   }
@@ -195,7 +213,7 @@ const borrowBook = async (req, res, next) => {
 
 
 
-// 6. ביצוע החזרה
+// 7. ביצוע החזרה
 const returnBook = async (req, res, next) => {
   try {
     const bookCode = parseInt(req.params.code);
@@ -219,15 +237,15 @@ const returnBook = async (req, res, next) => {
     const lastBorrow = book.borrowHistory[book.borrowHistory.length - 1];
 
     // מציאת המשתמש שהשאיל את הספר
-    const user = users.find(
-      user => user.code === Number(lastBorrow.customerCode)
-    );
+    const user = await User.findById(lastBorrow.customerCode);
 
-    // עדכון מערך הספרים של המשתמש
     if (user) {
+      // עדכון מערך הספרים של המשתמש
       user.borrowedBooks = user.borrowedBooks.filter(
-        code => code !== book.code
+        borrowedBook => borrowedBook.code !== book.code
       );
+
+      await user.save();
     }
 
     // סימון הספר כפנוי
@@ -236,13 +254,14 @@ const returnBook = async (req, res, next) => {
     await book.save();
 
     res.json({ message: 'הספר הוחזר בהצלחה', book });
+
   } catch (error) {
     next(error);
   }
 };
 
 
-// 7. מחיקת ספר לפי קוד
+// 8. מחיקת ספר לפי קוד
 const deleteBook = async (req, res, next) => {
   try {
     const bookCode = parseInt(req.params.code);
@@ -266,6 +285,7 @@ const deleteBook = async (req, res, next) => {
 module.exports = {
   getAllBooks,
   getBookByCode,
+  getBooksByCategory,
   addBook,
   updateBook,
   borrowBook,
