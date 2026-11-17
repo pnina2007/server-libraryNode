@@ -157,6 +157,7 @@ const updateBook = async (req, res, next) => {
 };
 
 
+
 // 6. ביצוע השאלה
 const borrowBook = async (req, res, next) => {
   try {
@@ -189,15 +190,25 @@ const borrowBook = async (req, res, next) => {
       return next(error);
     }
 
+    // בדיקה שהמשתמש לא השאיל יותר מ-3 ספרים
+    if (user.borrowedBooks.length >= 3) {
+      const error = new Error('לא ניתן להשאיל יותר מ-3 ספרים');
+      error.status = 400;
+      error.type = 'Bad Request';
+      return next(error);
+    }
+
     // הוספת הספר למערך הספרים המושאלים של המשתמש
     user.borrowedBooks.push({
       code: book.code,
-      name: book.title
+      name: book.title,
+      returnDate: null
     });
 
     book.isBorrowed = true;
     book.borrowHistory.push({
       borrowDate: borrowDate || new Date().toISOString().split('T')[0],
+      returnDate: null,
       customerCode: customerId
     });
 
@@ -210,6 +221,8 @@ const borrowBook = async (req, res, next) => {
     next(error);
   }
 };
+
+
 
 
 
@@ -236,21 +249,35 @@ const returnBook = async (req, res, next) => {
     // מציאת ההשאלה האחרונה של הספר
     const lastBorrow = book.borrowHistory[book.borrowHistory.length - 1];
 
+    if (!lastBorrow) {
+      const error = new Error('לא נמצאה היסטוריית השאלה לספר');
+      error.status = 400;
+      error.type = 'Bad Request';
+      return next(error);
+    }
+
     // מציאת המשתמש שהשאיל את הספר
     const user = await User.findById(lastBorrow.customerCode);
 
-    if (user) {
-      // עדכון מערך הספרים של המשתמש
-      user.borrowedBooks = user.borrowedBooks.filter(
-        borrowedBook => borrowedBook.code !== book.code
-      );
-
-      await user.save();
+    if (!user) {
+      const error = new Error('המשתמש לא קיים במערכת');
+      error.status = 404;
+      error.type = 'Not Found';
+      return next(error);
     }
+
+    // עדכון תאריך ההחזרה בפועל בהיסטוריית הספר
+    lastBorrow.returnDate = new Date();
+
+    // הסרת הספר ממערך הספרים של המשתמש
+    user.borrowedBooks = user.borrowedBooks.filter(
+      borrowedBook => borrowedBook.code !== book.code
+    );
 
     // סימון הספר כפנוי
     book.isBorrowed = false;
 
+    await user.save();
     await book.save();
 
     res.json({ message: 'הספר הוחזר בהצלחה', book });
@@ -259,6 +286,7 @@ const returnBook = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 // 8. מחיקת ספר לפי קוד

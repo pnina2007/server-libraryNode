@@ -10,15 +10,19 @@ const bookSchema = new mongoose.Schema({
     code: Number,
     title: { type: String, required: true, minlength: 2,
             maxlength: 20,  unique: true},
-    category: {type: String,enum: ['נוער', 'מבוגרים', 'ילדים'],
+    category: {type: String,enum: ['נוער', 'מבוגרים', 'ילדים','ממלכה'],
     required: true},
 
     isBorrowed: { type: Boolean, default: false },
     borrowHistory: [{
-        borrowDate: String,
-        customerCode: {
-            type: mongoose.Schema.Types.ObjectId, ref: 'User'}
-         }],
+    borrowDate: String,
+    returnDate: {
+        type: Date,
+        default: null
+    },
+    customerCode: {
+        type: mongoose.Schema.Types.ObjectId, ref: 'User'}
+}],
     image: String
 });
 
